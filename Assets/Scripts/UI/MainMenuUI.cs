@@ -64,7 +64,7 @@ namespace TrashBoat.UI
             }
             else
             {
-                m_creditsButton.onClick.RemoveAllListeners();
+                m_creditsBackButton.onClick.RemoveAllListeners();
             }
         }
     } 

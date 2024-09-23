@@ -5,6 +5,7 @@ namespace TrashBoat.Core.Units.Implementations
 {
     public class UnitImpl : MonoBehaviour
     {
+        [SerializeField] private Animator m_animator;
         [SerializeField] protected float m_cooldown = 2.0f;
         
         protected float m_lastCastTime;
@@ -34,6 +35,11 @@ namespace TrashBoat.Core.Units.Implementations
         protected bool CanCast()
         {
             return Time.time - m_lastCastTime >= m_cooldown;
+        }
+
+        protected void OnAttack()
+        {
+            m_animator.SetTrigger("attack");
         }
 
         protected DamagePayload CreateDamagePayload(float p_damage)

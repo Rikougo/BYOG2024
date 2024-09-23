@@ -13,6 +13,7 @@ namespace TrashBoat.Core.Units.Implementations
             if (this.CanCast())
             {
                 this.m_lastCastTime = Time.time;
+                this.OnAttack();
                 p_bossController.Damage(this.CreateDamagePayload(m_damage), this.Owner.Position);
 
                 if (this.Owner.Position == PositionType.FRONT_LEFT || this.Owner.Position == PositionType.FRONT_RIGHT)

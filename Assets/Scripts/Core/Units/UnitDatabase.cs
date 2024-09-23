@@ -20,6 +20,7 @@ namespace TrashBoat.Core.Units
     {
         public UnitStats statsAsset;
         public UnitBrain unitPrefab;
+        public Sprite icon;
     }
 
     [Serializable]

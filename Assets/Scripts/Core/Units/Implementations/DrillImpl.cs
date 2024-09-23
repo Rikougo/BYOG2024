@@ -26,6 +26,7 @@ namespace TrashBoat.Core.Units.Implementations
                 m_lastCastTime = Time.time;
                 m_ticking = true;
                 m_tickingAmount = 1;
+                this.OnAttack();
             }
 
             if (m_ticking)

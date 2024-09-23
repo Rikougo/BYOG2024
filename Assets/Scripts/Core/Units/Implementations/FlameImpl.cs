@@ -38,6 +38,7 @@ namespace TrashBoat.Core.Units.Implementations
                 m_attackTime = Time.time;
                 m_tickingTime = Time.time - m_tickTime;
                 m_flameRenderer.enabled = true;
+                this.OnAttack();
             }
 
             if (m_attacking)

@@ -12,6 +12,7 @@ namespace TrashBoat.UI
         [SerializeField] private Image m_healthFill;
         [SerializeField] private Image m_armorFill;
         [SerializeField] private TextMeshProUGUI m_healthText;
+        [SerializeField] private TextMeshProUGUI m_levelText;
 
         private void Start()
         {
@@ -29,6 +30,11 @@ namespace TrashBoat.UI
             m_healthText.text = l_armorPercent > 0 ? 
                                     $"{Mathf.Max(p_current.health, 0.0f):F0} (+{p_current.armor:F0})" : 
                                     $"{Mathf.Max(p_current.health, 0.0f):F0}";
+        }
+
+        private void Update()
+        {
+            m_levelText.text = $"{m_bossController.CurrentLevel}";
         }
     }
 }

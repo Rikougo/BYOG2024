@@ -40,6 +40,7 @@ namespace TrashBoat.Core.Units
         public UnitSlot[] UnitSlots => m_units.Values.ToArray();
 
         public event Action<AttackType> OnUnitDie;
+        public event Action OnUnitsUpdate;
 
         private void Start()
         {
@@ -76,6 +77,8 @@ namespace TrashBoat.Core.Units
             this.InstantiateUnit(p_frontRightType, PositionType.FRONT_RIGHT);
             this.InstantiateUnit(p_backLeftType, PositionType.BACK_LEFT);
             this.InstantiateUnit(p_backRightType, PositionType.BACK_RIGHT);
+            
+            this.OnUnitsUpdate?.Invoke();
         }
 
         public void Reset()
@@ -118,7 +121,7 @@ namespace TrashBoat.Core.Units
                 m_units[p_second].unitInstance.Reset();
                 m_units[p_first].unitInstance = null;
             }
-            else
+            else if (m_units[p_second].isActive)
             {
                 m_units[p_second].isActive = false;
                 m_units[p_first].isActive = true;
@@ -127,6 +130,8 @@ namespace TrashBoat.Core.Units
                 m_units[p_first].unitInstance.Reset();
                 m_units[p_second].unitInstance = null;
             }
+            
+            this.OnUnitsUpdate?.Invoke();
         }
         
         public void Tick(BossController p_bossController)
@@ -163,16 +168,6 @@ namespace TrashBoat.Core.Units
             {
                 l_unit.unitInstance.TakeDamage(p_payload);
             }
-        }
-
-        public bool IsUnitAlive(PositionType p_position)
-        {
-            return m_units[p_position].isActive;
-        }
-
-        private UnitBrain GetUnit(PositionType p_position)
-        {
-            return m_units[p_position].unitInstance;
         }
 
         private Transform GetSlot(PositionType p_position)
@@ -219,6 +214,8 @@ namespace TrashBoat.Core.Units
             this.OnUnitDie?.Invoke(l_slot.unitInstance.Type);
             Destroy(l_slot.unitInstance.gameObject);
             l_slot.unitInstance = null;
+
+            this.OnUnitsUpdate?.Invoke();
         }
 
         private bool HasFallbackStrategy(PositionType p_position, out PositionType p_outputPos)

@@ -6,10 +6,12 @@ namespace TrashBoat.Core.Units.Implementations
     public class HealerImpl : UnitImpl
     {
         [SerializeField] private LineRenderer m_beamRenderer;
+        [SerializeField] private float m_healTime = 1.18f;
         [SerializeField] private float m_healPerSecond = 5f;
         
         private bool m_hasTarget;
         private UnitBrain m_currentTarget;
+        private float m_startHealTime;
         
         public override void Init()
         {
@@ -40,16 +42,26 @@ namespace TrashBoat.Core.Units.Implementations
             {
                 this.ComputeTarget(p_teamController);
                 m_lastCastTime = Time.time;
+                m_startHealTime = Time.time;
+                this.OnAttack();
             }
 
-            if (m_currentTarget != null)
+            if (Time.time - m_startHealTime < m_healTime)
             {
-                m_currentTarget.Heal(m_healPerSecond * Time.deltaTime);
+                if (m_currentTarget != null)
+                {
+                    m_currentTarget.Heal(m_healPerSecond * Time.deltaTime);
+                }
+            }
+            else
+            {
+                this.ClearTarget();
+                this.UpdateBeam();
             }
             
             if (m_hasTarget)
             {
-                m_beamRenderer.SetPosition(1, this.transform.InverseTransformPoint(m_currentTarget.GetComponent<Renderer>().bounds.center));
+                m_beamRenderer.SetPosition(1, m_beamRenderer.transform.InverseTransformPoint(m_currentTarget.transform.position));
             }
         }
 

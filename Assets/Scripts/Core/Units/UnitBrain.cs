@@ -42,7 +42,10 @@ namespace TrashBoat.Core.Units
 
             m_text.text = $"{m_health}";
 
-            this.GetComponent<Renderer>().material.color = DevGetColor(m_attackType);
+            if (this.TryGetComponent(out Renderer l_renderer))
+            {
+                l_renderer.material.color = DevGetColor(m_attackType);
+            }
         }
 
         public void Reset()

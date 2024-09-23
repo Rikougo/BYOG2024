@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: BossStats
   m_EditorClassIdentifier: 
   m_baseHealth: 300
-  m_baseDamage: 20
+  m_baseDamage: 40
   m_baseHaste: 1
-  m_healthGrowth: 100
-  m_damageGrowth: 5
+  m_healthGrowth: 250
+  m_damageGrowth: 7.5
   m_hasteGrowth: 0.05
