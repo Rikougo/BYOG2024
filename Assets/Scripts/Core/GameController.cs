@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Linq;
 using Cinemachine;
+using TrashBoat.Core.Boss;
 using TrashBoat.Core.Units;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -8,120 +9,112 @@ using UnityEngine.UI;
 
 namespace TrashBoat.Core
 {
-    public class GameController : MonoBehaviour
-    {
-        [SerializeField] private GameManager m_gameManager;
-        [SerializeField] private TeamController m_teamController;
-        [SerializeField] private BossController m_bossController;
-        [SerializeField] private BossAnimationsHandler m_bossAnimationsHandler;
-        [SerializeField] private Button m_resumeButton;
-        [SerializeField] private Button m_leaveButton;
-        [SerializeField] private CinemachineVirtualCamera m_virtualCamera;
+	public class GameController : MonoBehaviour
+	{
+		[SerializeField] private GameManager m_gameManager;
+		[SerializeField] private TeamController m_teamController;
+		[SerializeField] private BossController m_bossController;
+		[SerializeField] private BossAnimationsHandler m_bossAnimationsHandler;
+		[SerializeField] private Button m_resumeButton;
+		[SerializeField] private Button m_leaveButton;
+		[SerializeField] private CinemachineVirtualCamera m_virtualCamera;
 
-        private float m_currency;
+		public float Currency { get; private set; }
 
-        public float Currency => m_currency;
-        
-        private void Start()
-        {
-            m_currency = 0.0f;
-            
-            m_teamController.InitRoaster(AttackType.SHIELD, 
-                                         AttackType.DRILL, 
-                                         AttackType.FLAME,
-                                         AttackType.HEAL); 
-            m_bossController.Init();
+		private void Start()
+		{
+			Currency = 0.0f;
 
-            m_bossController.OnDamageReceived += this.OnBossDamaged;
-            m_bossController.OnDefeated += this.OnBossDefeated;
+			m_teamController.InitRoaster(AttackType.SHIELD,
+			                             AttackType.DRILL,
+			                             AttackType.FLAME,
+			                             AttackType.HEAL);
+			m_bossController.Init();
 
-            m_bossAnimationsHandler.OnAnimationHit += this.OnBossAnimationHit;
-            
-            m_teamController.OnUnitDie += this.OnUnitDie;
+			m_bossController.OnDamageReceived += OnBossDamaged;
+			m_bossController.OnDefeated += OnBossDefeated;
 
-            m_resumeButton.gameObject.SetActive(false);
-            m_resumeButton.onClick.AddListener(this.ResumeGame);
+			m_bossAnimationsHandler.OnAnimationHit += OnBossAnimationHit;
 
-            m_gameManager.CurrentState = GameState.GAME;
-        }
-        
-        private void Update()
-        {
-            if (m_gameManager.CurrentState == GameState.GAME)
-            {
-                m_bossController.Tick(m_teamController);
-                m_teamController.Tick(m_bossController);
-            }
-        }
+			m_teamController.OnUnitDie += OnUnitDie;
 
-        private void OnBossAnimationHit(AttackType p_type)
-        {
-            if (m_gameManager.CurrentState == GameState.GAME)
-            {
-                m_bossController.AttackHit(p_type, m_teamController);
-                this.StartCoroutine(_ProcessShake());
-            }
-        }
-        
-        private IEnumerator _ProcessShake(float p_shakeIntensity = 5f, float p_shakeTiming = 0.5f)
-        {
-                this.Noise(2.5f, p_shakeIntensity);
-                yield return new WaitForSeconds(p_shakeTiming);
-                this.Noise(0, 0);
-        }
+			m_resumeButton.gameObject.SetActive(false);
+			m_resumeButton.onClick.AddListener(ResumeGame);
 
-        private void Noise(float p_amplitudeGain, float p_frequencyGain)
-        {
-            m_virtualCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>().m_AmplitudeGain = p_amplitudeGain;
-            m_virtualCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>().m_FrequencyGain = p_frequencyGain;
-        }
+			m_gameManager.CurrentState = GameState.GAME;
+		}
 
-        private void OnBossDamaged(float p_amount, bool p_isArmor, AttackType p_type)
-        {
-            if (!p_isArmor)
-            {
-                m_currency += p_amount;
-            }
-        }
+		private void Update()
+		{
+			if (m_gameManager.CurrentState == GameState.GAME)
+			{
+				m_bossController.Tick(m_teamController);
+				m_teamController.Tick(m_bossController);
+			}
+		}
 
-        private void OnBossDefeated()
-        {
-            this.PauseGame();
-        }
+		private void OnBossAnimationHit(AttackType p_type)
+		{
+			if (m_gameManager.CurrentState == GameState.GAME)
+			{
+				m_bossController.AttackHit(p_type, m_teamController);
+				StartCoroutine(_ProcessShake());
+			}
+		}
 
-        private void OnUnitDie(AttackType p_type)
-        {
-            if (!m_teamController.UnitSlots.Any(p_slot => p_slot.isActive))
-            {
-                this.EndGame();
-            }
-            
-            m_bossController.OnUnitDeath(p_type);
-        }
+		private IEnumerator _ProcessShake(float p_shakeIntensity = 5f, float p_shakeTiming = 0.5f)
+		{
+			Noise(2.5f, p_shakeIntensity);
+			yield return new WaitForSeconds(p_shakeTiming);
+			Noise(0, 0);
+		}
 
-        private void PauseGame()
-        {
-            m_gameManager.CurrentState = GameState.SELECTION;
-            m_resumeButton.gameObject.SetActive(true);
+		private void Noise(float p_amplitudeGain, float p_frequencyGain)
+		{
+			m_virtualCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>().m_AmplitudeGain = p_amplitudeGain;
+			m_virtualCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>().m_FrequencyGain = p_frequencyGain;
+		}
 
-            m_teamController.Pause();
-        }
+		private void OnBossDamaged(float p_amount, bool p_isArmor, AttackType p_type)
+		{
+			if (!p_isArmor) Currency += p_amount;
+		}
 
-        private void ResumeGame()
-        {
-            m_gameManager.CurrentState = GameState.GAME;
-            
-            m_teamController.Reset();
-            m_bossController.Reset();
-            m_resumeButton.gameObject.SetActive(false);
-        }
+		private void OnBossDefeated()
+		{
+			PauseGame();
+		}
 
-        private void EndGame()
-        {
-            m_gameManager.CurrentState = GameState.GAME_OVER;
-            m_leaveButton.onClick.AddListener(() => SceneManager.LoadScene("MainMenu"));
-            m_leaveButton.gameObject.SetActive(true);
-            m_resumeButton.gameObject.SetActive(false);
-        }
-    }
+		private void OnUnitDie(AttackType p_type)
+		{
+			if (!m_teamController.UnitSlots.Any(p_slot => p_slot.isActive)) EndGame();
+
+			m_bossController.OnUnitDeath(p_type);
+		}
+
+		private void PauseGame()
+		{
+			m_gameManager.CurrentState = GameState.SELECTION;
+			m_resumeButton.gameObject.SetActive(true);
+
+			m_teamController.Pause();
+		}
+
+		private void ResumeGame()
+		{
+			m_gameManager.CurrentState = GameState.GAME;
+
+			m_teamController.Reset();
+			m_bossController.Reset();
+			m_resumeButton.gameObject.SetActive(false);
+		}
+
+		private void EndGame()
+		{
+			m_gameManager.CurrentState = GameState.GAME_OVER;
+			m_leaveButton.onClick.AddListener(() => SceneManager.LoadScene("MainMenu"));
+			m_leaveButton.gameObject.SetActive(true);
+			m_resumeButton.gameObject.SetActive(false);
+		}
+	}
 }
