@@ -5,226 +5,154 @@ using TrashBoat.Core.Units;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-namespace TrashBoat.Core
+namespace TrashBoat.Core.Boss
 {
-    public class BossController : MonoBehaviour
-    {
-        [SerializeField] private BossStatsAsset m_statsAsset;
-        [SerializeField] private Animator m_animator;
-        [SerializeField] private float m_globalCooldown = 0.5f;
+	public partial class BossController : MonoBehaviour
+	{
+		[SerializeField] private BossStatsAsset m_statsAsset;
+		[SerializeField] private Animator m_animator;
+		[SerializeField] private float m_globalCooldown = 0.5f;
+		private bool m_alive;
+		private List<IAttackHandler> m_attackHandlers;
 
-        private int m_currentLevel;
-        private BossStats m_stats;
-        private BossStats m_referenceStats;
-        private List<IAttackHandler> m_attackHandlers;
-        private bool m_alive;
-        private float m_lastTimeCast;
+		private float m_lastTimeCast;
+		private BossStats m_referenceStats;
+		private BossStats m_stats;
 
-        public int CurrentLevel => m_currentLevel;
-        
-        public event Action<AttackType> OnAttackTypeLearned;
-        public event Action<float, bool, AttackType> OnDamageReceived;
-        public event Action<BossStats, BossStats> StatsUpdated;
-        public event Action OnDefeated;
+		public int CurrentLevel { get; private set; }
 
-        public void Init()
-        {
-            m_currentLevel = 0;
-            this.Reset();
-        }
-        
-        public void Reset()
-        {
-            m_lastTimeCast = Time.time;
-            m_alive = true;
-            m_animator.SetBool("Alive", m_alive);
-            m_stats = m_statsAsset.ComputeStats(m_currentLevel);
-            m_referenceStats = m_stats;
-            m_attackHandlers = new List<IAttackHandler>();
-            this.RegisterAttackHandler(AttackType.BASIC);
-            this.RegisterAttackHandler(AttackType.SPECIAL);
-            
-            this.StatsUpdated?.Invoke(m_stats, m_referenceStats);
-        }
-        
-        public void Tick(TeamController p_teamController)
-        {
-            float l_time = Time.time;
+		public void Reset()
+		{
+			m_lastTimeCast = Time.time;
+			m_alive = true;
+			m_animator.SetBool("Alive", m_alive);
+			m_stats = m_statsAsset.ComputeStats(CurrentLevel);
+			m_referenceStats = m_stats;
+			m_attackHandlers = new List<IAttackHandler>();
+			RegisterAttackHandler(AttackType.BASIC);
+			RegisterAttackHandler(AttackType.SPECIAL);
 
-            if (l_time - m_lastTimeCast > m_globalCooldown)
-            {
-                List<IAttackHandler> l_availableHandlers = m_attackHandlers
-                    .Where(p_handler => l_time - p_handler.LastTimeCast > p_handler.Cooldown)
-                    .ToList();
+			StatsUpdated?.Invoke(m_stats, m_referenceStats);
+		}
 
-                if (l_availableHandlers.Count > 0)
-                {
-                    IAttackHandler l_chosenHandler = l_availableHandlers[Random.Range(0, l_availableHandlers.Count)];
-                    l_chosenHandler.Attack(p_teamController, m_animator);
-                    l_chosenHandler.LastTimeCast = Time.time;
-                }
+		public event Action<AttackType> OnAttackTypeLearned;
+		public event Action<float, bool, AttackType> OnDamageReceived;
+		public event Action<BossStats, BossStats> StatsUpdated;
+		public event Action OnDefeated;
 
-                m_lastTimeCast = l_time;
-            }
-        }
+		public void Init()
+		{
+			CurrentLevel = 0;
+			Reset();
+		}
 
-        public void AttackHit(AttackType p_type, TeamController p_teamController)
-        {
-            m_attackHandlers.First(p_handler => p_handler.Type == p_type).OnHit(p_teamController);
-        }
-        public void Damage(DamagePayload p_payload, PositionType p_position)
-        {
-            if (!m_alive) return;
-            
-            float l_damage = p_payload.damageAmount;
+		public void Tick(TeamController p_teamController)
+		{
+			var l_time = Time.time;
 
-            if (m_stats.armor > 0)
-            {
-                float l_armorDamage = Math.Min(m_stats.armor, l_damage);
-                m_stats.armor -= l_armorDamage;
+			if (l_time - m_lastTimeCast > m_globalCooldown)
+			{
+				var l_availableHandlers = m_attackHandlers
+					.Where(p_handler => l_time - p_handler.LastTimeCast > p_handler.Cooldown)
+					.ToList();
 
-                this.OnDamageReceived?.Invoke(l_armorDamage, true, p_payload.damageType);
-                l_damage -= l_armorDamage;
-            }
+				if (l_availableHandlers.Count > 0)
+				{
+					var l_chosenHandler = l_availableHandlers[Random.Range(0, l_availableHandlers.Count)];
+					l_chosenHandler.Attack(p_teamController, m_animator);
+					l_chosenHandler.LastTimeCast = Time.time;
+				}
 
-            this.OnDamageReceived?.Invoke(l_damage, false, p_payload.damageType);
-            m_stats.health -= l_damage;
+				m_lastTimeCast = l_time;
+			}
+		}
 
-            if (m_stats.health <= 0)
-            {
-                this.Die();
-            }
-            
-            this.StatsUpdated?.Invoke(m_stats, m_referenceStats);
-        }
+		public void AttackHit(AttackType p_type, TeamController p_teamController)
+		{
+			m_attackHandlers.First(p_handler => p_handler.Type == p_type).OnHit(p_teamController);
+		}
 
-        public void OnUnitDeath(AttackType p_attackType)
-        {
-            if (!this.HasAttackType(p_attackType))
-            {
-                // TODO this.RegisterAttackHandler(p_attackType);
-            }
-        }
+		public void Damage(DamagePayload p_payload, PositionType p_position)
+		{
+			if (!m_alive) return;
 
-        private void RegisterAttackHandler(AttackType p_attackType)
-        {
-            if (this.HasAttackType(p_attackType))
-            {
-                Debug.LogError($"BossController::RegisterAttackHandler: Already has attack type [{p_attackType}]");
-                return;
-            }
-            
-            IAttackHandler l_handler = BossController.GetHandlerByType(p_attackType);
-            
-            l_handler.LastTimeCast = Time.time;
-            l_handler.Stats = m_stats;
-            m_attackHandlers.Add(l_handler);
+			var l_damage = p_payload.damageAmount;
 
-            this.OnAttackTypeLearned?.Invoke(p_attackType);
-        }
+			if (m_stats.armor > 0)
+			{
+				var l_armorDamage = Math.Min(m_stats.armor, l_damage);
+				m_stats.armor -= l_armorDamage;
 
-        private bool HasAttackType(AttackType p_attackType)
-        {
-            return m_attackHandlers.Any(p_handler => p_handler.Type == p_attackType);
-        }
+				OnDamageReceived?.Invoke(l_armorDamage, true, p_payload.damageType);
+				l_damage -= l_armorDamage;
+			}
 
-        private void Die()
-        {
-            m_alive = false;
-            m_animator.SetBool("Alive", m_alive);
-            m_animator.SetTrigger("death");
-            this.OnDefeated?.Invoke();
-            m_currentLevel++;
-        }
+			OnDamageReceived?.Invoke(l_damage, false, p_payload.damageType);
+			m_stats.health -= l_damage;
 
-        private static IAttackHandler GetHandlerByType(AttackType p_type)
-        {
-            IAttackHandler l_handler;
-            
-            switch (p_type)
-            {
-                case AttackType.BASIC:
-                    l_handler = new BasicAttackHandler();
-                    break;
-                case AttackType.SPECIAL:
-                    l_handler = new SpecialAttackHandler();
-                    break;
-                default:
-                    throw new NotImplementedException();
-            }
+			if (m_stats.health <= 0) Die();
 
-            l_handler.Type = p_type;
+			StatsUpdated?.Invoke(m_stats, m_referenceStats);
+		}
 
-            return l_handler;
-        }
+		public void OnUnitKilled(AttackType p_attackType)
+		{
+			if (!HasAttackType(p_attackType))
+			{
+				// TODO this.RegisterAttackHandler(p_attackType);
+			}
+		}
 
-        private interface IAttackHandler
-        {
-            public float LastTimeCast { get; set; }
-            public float Cooldown { get; }
-            public AttackType Type { get; set; }
-            public BossStats Stats { get; set; }
-            
-            public void Attack(TeamController p_teamController, Animator p_animator);
-            public void OnHit(TeamController p_teamController);
-        }
+		private void RegisterAttackHandler(AttackType p_attackType)
+		{
+			if (HasAttackType(p_attackType))
+			{
+				Debug.LogError($"BossController::RegisterAttackHandler: Already has attack type [{p_attackType}]");
+				return;
+			}
 
-        private abstract class BaseAttackHandler : IAttackHandler
-        {
-            public float LastTimeCast { get; set; }
-            public abstract float Cooldown { get; }
-            public AttackType Type { get; set; }
-            public BossStats Stats { get; set; }
-            protected abstract float DamageCoef { get; }
-            
-            public abstract void Attack(TeamController p_teamController, Animator p_animator);
-            public virtual void OnHit(TeamController p_teamController) { }
+			var l_handler = GetHandlerByType(p_attackType);
 
-            protected DamagePayload GeneratePayload()
-            {
-                return new DamagePayload()
-                {
-                    isBoss = true,
-                    damageAmount = this.Stats.damage * this.DamageCoef,
-                    damageType = this.Type,
-                };
-            }
-        }
+			l_handler.LastTimeCast = Time.time;
+			l_handler.Stats = m_stats;
+			m_attackHandlers.Add(l_handler);
 
-        private class BasicAttackHandler : BaseAttackHandler
-        {
-            public override float Cooldown => 1.5f;
-            protected override float DamageCoef => 1.0f;
+			OnAttackTypeLearned?.Invoke(p_attackType);
+		}
 
-            public override void Attack(TeamController p_teamController, Animator p_animator)
-            {
-                Debug.Log($"[Monster] [{Time.time}] Cast Basic {this.GeneratePayload()}");
-                p_animator.SetTrigger("swipe");
-            }
+		private bool HasAttackType(AttackType p_attackType)
+		{
+			return m_attackHandlers.Any(p_handler => p_handler.Type == p_attackType);
+		}
 
-            public override void OnHit(TeamController p_teamController)
-            {
-                Debug.Log($"[Monster] [{Time.time}] On basic hit");
-                p_teamController.DamageTeamMember(PositionTypeHelper.GetFront(), this.GeneratePayload());
-            }
-        }
+		private void Die()
+		{
+			m_alive = false;
+			m_animator.SetBool("Alive", m_alive);
+			m_animator.SetTrigger("death");
+			OnDefeated?.Invoke();
+			CurrentLevel++;
+		}
 
-        private class SpecialAttackHandler : BaseAttackHandler
-        {
-            public override float Cooldown => 3.0f;
-            protected override float DamageCoef => 0.5f;
+		private static IAttackHandler GetHandlerByType(AttackType p_type)
+		{
+			IAttackHandler l_handler;
 
-            public override void Attack(TeamController p_teamController, Animator p_animator)
-            {
-                Debug.Log($"[Monster] [{Time.time}] Cast Special");
-                p_animator.SetTrigger("roar");
-            }
-            
-            public override void OnHit(TeamController p_teamController)
-            {
-                Debug.Log($"[Monster] [{Time.time}] On special hit");
-                p_teamController.DamageTeamMember(PositionTypeHelper.GetAll(), this.GeneratePayload());
-            }
-        }
-    }
+			switch (p_type)
+			{
+				case AttackType.BASIC:
+					l_handler = new BasicAttackHandler();
+					break;
+				case AttackType.SPECIAL:
+					l_handler = new SpecialAttackHandler();
+					break;
+				default:
+					throw new NotImplementedException();
+			}
+
+			l_handler.Type = p_type;
+
+			return l_handler;
+		}
+	}
 }

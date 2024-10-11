@@ -1,36 +1,39 @@
-﻿using UnityEngine;
+﻿using TrashBoat.Core.Boss;
+using UnityEngine;
 
 namespace TrashBoat.Core.Units.Implementations
 {
-    public class ShieldImpl : UnitImpl
-    {
-        [SerializeField] private float m_damage;
-        [SerializeField] private float m_armorValue;
-        
-        public override void Tick(TeamController p_teamController, BossController p_bossController)
-        {
-            base.Tick(p_teamController, p_bossController);
-            if (this.CanCast())
-            {
-                this.m_lastCastTime = Time.time;
-                this.OnAttack();
-                p_bossController.Damage(this.CreateDamagePayload(m_damage), this.Owner.Position);
+	public class ShieldImpl : UnitImpl
+	{
+		[SerializeField] private float m_damage;
+		[SerializeField] private float m_armorValue;
 
-                if (this.Owner.Position == PositionType.FRONT_LEFT || this.Owner.Position == PositionType.FRONT_RIGHT)
-                {
-                    PositionType l_targetPos = this.Owner.Position == PositionType.FRONT_LEFT
-                                                   ? PositionType.BACK_LEFT
-                                                   : PositionType.BACK_RIGHT;
-                    TeamController.UnitSlot l_targetSlot = p_teamController[l_targetPos];
+		public override void Tick(TeamController p_teamController, BossController p_bossController)
+		{
+			base.Tick(p_teamController, p_bossController);
+			if (CanCast())
+			{
+				m_lastCastTime = Time.time;
+				OnAttack();
+				p_bossController.Damage(CreateDamagePayload(m_damage), Owner.Position);
 
-                    if (l_targetSlot.isActive)
-                    {
-                        l_targetSlot.unitInstance.GrantArmor(m_armorValue);
-                    }
-                }
+				ComputeShieldTarget(p_teamController);
 
-                this.Owner.GrantArmor(m_armorValue);
-            }
-        }
-    }
+				Owner.GrantArmor(m_armorValue);
+			}
+		}
+
+		private void ComputeShieldTarget(TeamController p_teamController)
+		{
+			if (Owner.Position == PositionType.FRONT_LEFT || Owner.Position == PositionType.FRONT_RIGHT)
+			{
+				var l_targetPos = Owner.Position == PositionType.FRONT_LEFT
+					                  ? PositionType.BACK_LEFT
+					                  : PositionType.BACK_RIGHT;
+				var l_targetSlot = p_teamController[l_targetPos];
+
+				if (l_targetSlot.isActive) l_targetSlot.unitInstance.GrantArmor(m_armorValue);
+			}
+		}
+	}
 }
