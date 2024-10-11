@@ -95,7 +95,7 @@ namespace TrashBoat.Core.Boss
 			StatsUpdated?.Invoke(m_stats, m_referenceStats);
 		}
 
-		public void OnUnitDeath(AttackType p_attackType)
+		public void OnUnitKilled(AttackType p_attackType)
 		{
 			if (!HasAttackType(p_attackType))
 			{

@@ -58,15 +58,15 @@ namespace TrashBoat.Core
 			if (m_gameManager.CurrentState == GameState.GAME)
 			{
 				m_bossController.AttackHit(p_type, m_teamController);
-				StartCoroutine(_ProcessShake());
+				this.StartCoroutine(_ProcessShake());
 			}
 		}
 
 		private IEnumerator _ProcessShake(float p_shakeIntensity = 5f, float p_shakeTiming = 0.5f)
 		{
-			Noise(2.5f, p_shakeIntensity);
+			this.Noise(2.5f, p_shakeIntensity);
 			yield return new WaitForSeconds(p_shakeTiming);
-			Noise(0, 0);
+			this.Noise(0, 0);
 		}
 
 		private void Noise(float p_amplitudeGain, float p_frequencyGain)
@@ -82,14 +82,18 @@ namespace TrashBoat.Core
 
 		private void OnBossDefeated()
 		{
-			PauseGame();
+			this.PauseGame();
 		}
 
 		private void OnUnitDie(AttackType p_type)
 		{
-			if (!m_teamController.UnitSlots.Any(p_slot => p_slot.isActive)) EndGame();
+			if (!m_teamController.UnitSlots.Any(p_slot => p_slot.isActive))
+			{
+				this.EndGame();
+				return;
+			}
 
-			m_bossController.OnUnitDeath(p_type);
+			m_bossController.OnUnitKilled(p_type);
 		}
 
 		private void PauseGame()
